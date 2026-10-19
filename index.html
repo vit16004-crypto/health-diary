@@ -736,7 +736,10 @@ const app = {
         html += '</div>';
         html += '<div class="text-right">';
         if (r.weight) html += '<div class="text-sm font-bold text-gray-900">' + r.weight + ' кг</div>';
-        if (r.bmi) html += '<div class="text-xs text-gray-500 font-semibold">ИМТ ' + r.bmi + '</div>';
+        if (r.bmi) {
+          const bs = this.bmiStyle(r.bmi);
+          html += '<span class="text-xs font-bold" style="background:' + bs.bg + ';color:' + bs.color + ';padding:3px 9px;border-radius:999px;display:inline-block;margin-top:2px">ИМТ ' + r.bmi + '</span>';
+        }
         if (r.pulse) html += '<div class="text-xs text-gray-500 font-semibold">❤️ ' + r.pulse + ' уд/мин</div>';
         html += '</div>';
         html += '<button onclick="app.deleteRecord(\'' + r.id + '\')" class="p-2 text-gray-400 hover:text-red-500 transition">🗑</button>';
