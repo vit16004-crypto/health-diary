@@ -58,28 +58,6 @@
     .input-field::placeholder { color: #94a3b8; font-weight: 500; }
     input[type="date"] { -webkit-appearance: none; }
 
-    .segment-btn {
-      flex: 1;
-      padding: 12px 8px;
-      border-radius: 14px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 700;
-      color: #64748b;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      user-select: none;
-    }
-    .segment-btn span.icon { font-size: 18px; }
-    .segment-btn.active {
-      background: #fff;
-      color: var(--primary);
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    }
-
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
       color: #fff;
@@ -262,25 +240,6 @@
             <label class="block text-sm font-bold text-gray-700 mb-2">🕐 Время</label>
             <input type="time" id="f-time" class="input-field">
           </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-bold text-gray-700 mb-2">🕐 Время суток</label>
-          <div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5" id="tod-segment">
-            <div class="segment-btn active" data-tod="morning">
-              <span class="icon">🌅</span>
-              <span>Утро</span>
-            </div>
-            <div class="segment-btn" data-tod="day">
-              <span class="icon">☀️</span>
-              <span>День</span>
-            </div>
-            <div class="segment-btn" data-tod="evening">
-              <span class="icon">🌙</span>
-              <span>Вечер</span>
-            </div>
-          </div>
-          <input type="hidden" name="f-tod" id="f-tod" value="morning">
         </div>
 
         <div class="pt-2">
@@ -466,7 +425,6 @@ const app = {
   settings: { heightDefault: 170 },
   period: 'all',
   charts: {},
-  selectedTod: 'morning',
 
   init() {
     this.records = this.loadRecords();
@@ -477,16 +435,6 @@ const app = {
     document.getElementById('f-time').value = this.nowHM();
     const h = document.getElementById('f-height');
     if (!h.value && this.settings.heightDefault) h.value = this.settings.heightDefault;
-
-    // Segment control
-    document.querySelectorAll('#tod-segment .segment-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#tod-segment .segment-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedTod = btn.dataset.tod;
-        document.getElementById('f-tod').value = this.selectedTod;
-      });
-    });
 
     this.calcBMI();
     this.show('entry');
@@ -629,7 +577,6 @@ const app = {
   addRecord() {
     const date = document.getElementById('f-date').value;
     const time = document.getElementById('f-time').value || this.nowHM();
-    const tod = document.getElementById('f-tod').value;
     const rightSys = this.getNum('f-right-sys');
     const rightDia = this.getNum('f-right-dia');
     const leftSys = this.getNum('f-left-sys');
@@ -650,7 +597,7 @@ const app = {
 
     const rec = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      date, time, timeOfDay: tod,
+      date, time,
       rightSys, rightDia, leftSys, leftDia,
       weight, height, bmi, pulse,
       createdAt: new Date().toISOString()
@@ -724,12 +671,10 @@ const app = {
         const sys = r.rightSys != null ? r.rightSys : r.leftSys;
         const dia = r.rightDia != null ? r.rightDia : r.leftDia;
         const st = this.bpStatus(sys, dia);
-        const todEmoji = r.timeOfDay === 'morning' ? '🌅' : r.timeOfDay === 'day' ? '☀️' : '🌙';
         html += '<div class="record-card card p-4 mb-2 flex items-center justify-between">';
         html += '<div class="flex items-center gap-3">';
-        html += '<span style="font-size:20px">' + todEmoji + '</span>';
         const timeStr = r.time || (r.createdAt ? new Date(r.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '');
-        html += '<div><div class="text-xs text-gray-500 font-semibold">' + TIME_LABELS[r.timeOfDay] + (timeStr ? ' · ' + timeStr : '') + '</div></div>';
+        if (timeStr) html += '<div class="text-sm font-bold text-gray-600">' + timeStr + '</div>';
         html += '</div>';
         html += '<div class="text-center">';
         html += '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">' + (sys ?? '—') + '/' + (dia ?? '—') + '</span>';
@@ -873,8 +818,6 @@ const app = {
     this.renderCharts();
   }
 };
-
-const TIME_LABELS = { morning: 'Утро', day: 'День', evening: 'Вечер' };
 
 app.init();
 
