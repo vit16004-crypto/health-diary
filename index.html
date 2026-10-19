@@ -526,6 +526,23 @@ const app = {
     const p = n => String(n).padStart(2, '0');
     return p(d.getHours()) + ':' + p(d.getMinutes());
   },
+  recTime(r) {
+    if (r.time) return r.time;
+    if (r.createdAt) {
+      const d = new Date(r.createdAt);
+      const p = n => String(n).padStart(2, '0');
+      return p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    return '';
+  },
+  todFromTime(hm) {
+    if (!hm) return null;
+    const h = parseInt(String(hm).split(':')[0], 10);
+    if (isNaN(h)) return null;
+    if (h >= 5 && h < 12) return { emoji: '🌅', label: 'Утро' };
+    if (h >= 12 && h < 18) return { emoji: '☀️', label: 'День' };
+    return { emoji: '🌙', label: 'Вечер' };
+  },
   getNum(id) {
     const v = document.getElementById(id).value;
     return v === '' ? null : parseFloat(v);
@@ -673,8 +690,10 @@ const app = {
         const st = this.bpStatus(sys, dia);
         html += '<div class="record-card card p-4 mb-2 flex items-center justify-between">';
         html += '<div class="flex items-center gap-3">';
-        const timeStr = r.time || (r.createdAt ? new Date(r.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '');
-        if (timeStr) html += '<div class="text-sm font-bold text-gray-600">' + timeStr + '</div>';
+        const timeStr = this.recTime(r);
+        const tod = this.todFromTime(timeStr);
+        if (tod) html += '<span style="font-size:20px">' + tod.emoji + '</span>';
+        if (timeStr) html += '<div><div class="text-xs text-gray-500 font-semibold">' + (tod ? tod.label + ' · ' : '') + timeStr + '</div></div>';
         html += '</div>';
         html += '<div class="text-center">';
         html += '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">' + (sys ?? '—') + '/' + (dia ?? '—') + '</span>';
