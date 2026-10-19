@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Дневник здоровья</title>
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --accent: #10b981;
+    }
+
+    * { -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      background: linear-gradient(160deg, #e0e7ff 0%, #f0fdf4 50%, #eff6ff 100%);
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overscroll-behavior: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.5);
+      border-radius: 24px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card:active { transform: scale(0.98); }
+
+    .input-field {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 14px 16px;
+      font-size: 17px;
+      font-weight: 600;
+      color: #1e293b;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(79,70,229,0.08);
+    }
+    .input-field::placeholder { color: #94a3b8; font-weight: 500; }
+    input[type="date"] { -webkit-appearance: none; }
+
+    .segment-btn {
+      flex: 1;
+      padding: 12px 8px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      color: #64748b;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      user-select: none;
+    }
+    .segment-btn span.icon { font-size: 18px; }
+    .segment-btn.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      border-radius: 18px;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 800;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(79,70,229,0.3);
+      transition: all 0.2s;
+      border: none;
+    }
+    .btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 12px rgba(79,70,229,0.2); }
+
+    .btn-secondary {
+      background: #fff;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #334155;
+      transition: all 0.2s;
+    }
+    .btn-secondary:active { transform: scale(0.97); }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 0;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      transition: all 0.2s;
+      border-radius: 12px;
+    }
+    .nav-item .icon { font-size: 22px; transition: transform 0.2s; }
+    .nav-item.active { color: var(--primary); }
+    .nav-item.active .icon { transform: translateY(-2px); }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .record-card { transition: all 0.2s; }
+    .record-card:active { transform: scale(0.98); }
+
+    .day-header {
+      font-size: 12px;
+      font-weight: 800;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 8px 4px 4px;
+    }
+
+    .month-header {
+      font-size: 16px;
+      font-weight: 800;
+      color: #334155;
+      padding: 4px 0 8px;
+    }
+
+    .bmi-display {
+      background: linear-gradient(135deg, #dbeafe 0%, #dbeafe 100%);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .bmi-value {
+      font-size: 34px;
+      font-weight: 900;
+      color: var(--primary);
+      line-height: 1;
+    }
+    .bmi-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      background: #e2e8f0;
+      color: #475569;
+      transition: all 0.25s;
+    }
+
+    .chart-wrap { height: 220px; position: relative; margin-bottom: 20px; }
+    .chart-card { padding: 20px; }
+
+    .tab-header {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .tab-subtitle {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .view-active { animation: slideIn 0.3s ease-out; }
+
+    .stats-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+    .stat-box {
+      flex: 1 1 calc(50% - 5px);
+      background: #fff;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      text-align: center;
+    }
+    .stat-value { font-size: 20px; font-weight: 900; color: #1e293b; }
+    .stat-label { font-size: 11px; color: #64748b; font-weight: 700; margin-top: 2px; }
+
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(0,0,0,0.06);
+      padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+      display: flex;
+      gap: 4px;
+    }
+
+    .empty-state { text-align: center; color: #94a3b8; padding: 40px 20px; }
+  </style>
+</head>
+<body class="text-gray-900">
+
+  <!-- ===== ЗАПИСЬ ===== -->
+  <section id="view-entry" class="view hidden flex-1 overflow-y-auto pb-24 px-4 pt-6">
+    <div class="max-w-md mx-auto">
+      <div class="mb-6">
+        <div class="tab-header">Новая запись</div>
+        <div class="tab-subtitle">Измерения за сегодня</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <div id="stat-bp" class="stat-value">—</div>
+          <div class="stat-label">Давление</div>
+        </div>
+        <div class="stat-box">
+          <div id="stat-weight" class="stat-value">—</div>
+          <div class="stat-label">Вес, кг</div>
+        </div>
+        <div class="stat-box">
+          <div id="stat-bmi" class="stat-value">—</div>
+          <div class="stat-label">ИМТ</div>
+        </div>
+        <div class="stat-box">
+          <div id="stat-pulse" class="stat-value">—</div>
+          <div class="stat-label">Пульс, уд/мин</div>
+        </div>
+      </div>
+
+      <div class="card p-5 space-y-5 mb-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">📅 Дата</label>
+            <input type="date" id="f-date" required class="input-field">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-2">🕐 Время</label>
+            <input type="time" id="f-time" class="input-field">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2">🕐 Время суток</label>
+          <div class="flex gap-2 bg-gray-100 rounded-2xl p-1.5" id="tod-segment">
+            <div class="segment-btn active" data-tod="morning">
+              <span class="icon">🌅</span>
+              <span>Утро</span>
+            </div>
+            <div class="segment-btn" data-tod="day">
+              <span class="icon">☀️</span>
+              <span>День</span>
+            </div>
+            <div class="segment-btn" data-tod="evening">
+              <span class="icon">🌙</span>
+              <span>Вечер</span>
+            </div>
+          </div>
+          <input type="hidden" name="f-tod" id="f-tod" value="morning">
+        </div>
+
+        <div class="pt-2">
+          <label class="block text-sm font-bold text-gray-700 mb-3">🩺 Давление</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs font-bold text-gray-500 mb-1.5">Правая рука</div>
+              <div class="flex gap-2">
+                <input type="number" id="f-right-sys" placeholder="120" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
+                <input type="number" id="f-right-dia" placeholder="80" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
+              </div>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-gray-500 mb-1.5">Левая рука</div>
+              <div class="flex gap-2">
+                <input type="number" id="f-left-sys" placeholder="120" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
+                <input type="number" id="f-left-dia" placeholder="80" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <label class="block text-sm font-bold text-gray-700 mb-3">❤️ Пульс, уд/мин</label>
+          <input type="number" id="f-pulse" min="20" max="300" placeholder="72" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
+        </div>
+
+        <div class="pt-2">
+          <label class="block text-sm font-bold text-gray-700 mb-3">⚖️ Вес и рост</label>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs font-bold text-gray-500 mb-1.5">Вес, кг</div>
+              <input type="number" id="f-weight" step="0.1" placeholder="70" inputmode="decimal" class="input-field" style="text-align:center" oninput="app.calcBMI()">
+            </div>
+            <div>
+              <div class="text-xs font-bold text-gray-500 mb-1.5">Рост, см</div>
+              <input type="number" id="f-height" step="0.1" placeholder="170" inputmode="decimal" class="input-field" style="text-align:center" oninput="app.calcBMI()">
+            </div>
+          </div>
+        </div>
+
+        <div class="bmi-display">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-bold text-blue-800 mb-2">ИМТ (вес ÷ рост²)</div>
+              <div id="bmi-category" class="bmi-badge">Введите вес и рост</div>
+            </div>
+            <div id="bmi-result" class="bmi-value">—</div>
+          </div>
+        </div>
+
+        <button type="button" onclick="app.addRecord()" class="btn-primary">
+          ✅ Сохранить запись
+        </button>
+      </div>
+
+      <div class="text-xs text-gray-500 text-center mt-4">Данные хранятся только на вашем устройстве.</div>
+    </div>
+  </section>
+
+  <!-- ===== ИСТОРИЯ ===== -->
+  <section id="view-history" class="view hidden flex-1 overflow-y-auto pb-24 px-4 pt-6">
+    <div class="max-w-md mx-auto">
+      <div class="mb-6">
+        <div class="tab-header">История</div>
+        <div id="history-stats" class="tab-subtitle">Всего записей: 0</div>
+      </div>
+
+      <div id="history-list" class="space-y-4"></div>
+    </div>
+  </section>
+
+  <!-- ===== ГРАФИКИ ===== -->
+  <section id="view-charts" class="view hidden flex-1 overflow-y-auto pb-24 px-4 pt-6">
+    <div class="max-w-md mx-auto">
+      <div class="mb-6">
+        <div class="tab-header">Графики</div>
+        <div class="tab-subtitle">Динамика показателей</div>
+      </div>
+
+      <div class="card p-4 mb-5">
+        <div class="flex gap-2" id="period-filter">
+          <button onclick="app.setPeriod('7d')" class="period-btn flex-1 py-2.5 rounded-xl text-sm font-bold bg-white shadow-sm text-gray-700 transition">7 дней</button>
+          <button onclick="app.setPeriod('30d')" class="period-btn flex-1 py-2.5 rounded-xl text-sm font-bold bg-white shadow-sm text-gray-700 transition">30 дней</button>
+          <button onclick="app.setPeriod('90d')" class="period-btn flex-1 py-2.5 rounded-xl text-sm font-bold bg-white shadow-sm text-gray-700 transition">90 дней</button>
+          <button onclick="app.setPeriod('all')" class="period-btn flex-1 py-2.5 rounded-xl text-sm font-bold bg-white shadow-sm text-gray-700 transition">Всё</button>
+        </div>
+      </div>
+
+      <div class="card chart-card mb-5">
+        <div class="text-sm font-bold text-gray-700 mb-3">Давление, мм рт.ст.</div>
+        <div class="chart-wrap"><canvas id="chart-pressure"></canvas></div>
+      </div>
+
+      <div class="card chart-card mb-5">
+        <div class="text-sm font-bold text-gray-700 mb-3">Пульс, уд/мин</div>
+        <div class="chart-wrap"><canvas id="chart-pulse"></canvas></div>
+      </div>
+
+      <div class="card chart-card mb-5">
+        <div class="text-sm font-bold text-gray-700 mb-3">Вес, кг</div>
+        <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="text-sm font-bold text-gray-700 mb-3">ИМТ</div>
+        <div class="chart-wrap"><canvas id="chart-bmi"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== НАСТРОЙКИ ===== -->
+  <section id="view-settings" class="view hidden flex-1 overflow-y-auto pb-24 px-4 pt-6">
+    <div class="max-w-md mx-auto">
+      <div class="mb-6">
+        <div class="tab-header">Настройки</div>
+        <div class="tab-subtitle">Рост, бэкап, экспорт</div>
+      </div>
+
+      <div class="card p-5 space-y-5 mb-4">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-2">📏 Рост по умолчанию, см</label>
+          <input type="number" id="s-height" step="0.1" inputmode="decimal" class="input-field" onchange="app.saveSettings()">
+        </div>
+      </div>
+
+      <div class="card p-5 space-y-4 mb-4">
+        <div class="text-sm font-bold text-gray-700">💾 Автобэкап (раз в неделю)</div>
+        <p class="text-xs text-gray-500">Копия записей сохраняется в памяти телефона каждые 7 дней.</p>
+        <div class="text-xs text-gray-600">Последний бэкап: <span id="auto-backup-info" class="font-bold text-gray-800">—</span></div>
+        <div class="flex gap-3">
+          <button onclick="app.forceBackup()" class="btn-secondary flex-1">Создать сейчас</button>
+          <button onclick="app.restoreBackup()" class="btn-secondary flex-1">Восстановить</button>
+        </div>
+      </div>
+
+      <div class="card p-5 space-y-4 mb-4">
+        <div class="text-sm font-bold text-gray-700">📤 Экспорт / Импорт</div>
+        <div class="flex gap-3">
+          <button onclick="app.exportData()" class="btn-secondary flex-1">Экспорт JSON</button>
+          <button onclick="document.getElementById('import-file').click()" class="btn-secondary flex-1">Импорт JSON</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" hidden onchange="app.importData(event)">
+      </div>
+
+      <div class="card p-5 space-y-4 mb-4">
+        <div class="text-sm font-bold text-gray-700">🗑 Опасная зона</div>
+        <button onclick="app.clearAll()" class="w-full py-3 bg-red-50 border-2 border-red-100 rounded-xl text-red-600 font-bold hover:bg-red-100 transition">Удалить все записи</button>
+      </div>
+
+      <div class="card p-5">
+        <div class="text-sm font-bold text-gray-700 mb-2">О приложении</div>
+        <p class="text-xs text-gray-600 leading-relaxed">Дневник артериального давления и массы тела. Записи хранятся локально в браузере вашего телефона. ИМТ рассчитывается по формуле: вес (кг) ÷ рост (м)². Это не медицинское приложение — для консультации обратитесь к врачу.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== НИЖНЯЯ НАВИГАЦИЯ ===== -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-tab="entry" onclick="app.show('entry')">
+      <span class="icon">✏️</span>
+      <span>Запись</span>
+    </div>
+    <div class="nav-item" data-tab="history" onclick="app.show('history')">
+      <span class="icon">📋</span>
+      <span>История</span>
+    </div>
+    <div class="nav-item" data-tab="charts" onclick="app.show('charts')">
+      <span class="icon">📈</span>
+      <span>Графики</span>
+    </div>
+    <div class="nav-item" data-tab="settings" onclick="app.show('settings')">
+      <span class="icon">⚙️</span>
+      <span>Настройки</span>
+    </div>
+  </nav>
+
+<script>
+const STORAGE_KEY = 'health_app_v1';
+
+const app = {
+  records: [],
+  settings: { heightDefault: 170 },
+  period: 'all',
+  charts: {},
+  selectedTod: 'morning',
+
+  init() {
+    this.records = this.loadRecords();
+    this.settings = this.loadSettings();
+    this.updateBackupInfo();
+
+    document.getElementById('f-date').value = this.todayStr();
+    document.getElementById('f-time').value = this.nowHM();
+    const h = document.getElementById('f-height');
+    if (!h.value && this.settings.heightDefault) h.value = this.settings.heightDefault;
+
+    // Segment control
+    document.querySelectorAll('#tod-segment .segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#tod-segment .segment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedTod = btn.dataset.tod;
+        document.getElementById('f-tod').value = this.selectedTod;
+      });
+    });
+
+    this.calcBMI();
+    this.show('entry');
+  },
+
+  // ===== STORAGE =====
+  loadRecords() {
+    try { const r = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; }
+  },
+  saveRecords() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.records));
+    this.autoBackup();
+  },
+  loadSettings() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY + '_settings') || '{}'); } catch (e) { return {}; } },
+  saveSettings() {
+    this.settings.heightDefault = parseFloat(document.getElementById('s-height').value) || 170;
+    localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(this.settings));
+  },
+
+  autoBackup() {
+    const now = Date.now();
+    const last = this.settings.lastAutoBackup || 0;
+    if (now - last >= 7 * 24 * 60 * 60 * 1000) {
+      try {
+        localStorage.setItem(STORAGE_KEY + '_backup', JSON.stringify(this.records));
+        this.settings.lastAutoBackup = now;
+        localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(this.settings));
+        this.updateBackupInfo();
+      } catch (e) { /* ignore */ }
+    }
+  },
+  forceBackup() {
+    try {
+      localStorage.setItem(STORAGE_KEY + '_backup', JSON.stringify(this.records));
+      this.settings.lastAutoBackup = Date.now();
+      localStorage.setItem(STORAGE_KEY + '_settings', JSON.stringify(this.settings));
+      this.updateBackupInfo();
+      alert('Бэкап создан. Скопировано записей: ' + this.records.length);
+    } catch (e) { alert('Ошибка бэкапа: ' + e.message); }
+  },
+  restoreBackup() {
+    const raw = localStorage.getItem(STORAGE_KEY + '_backup');
+    if (!raw) { alert('Бэкапа не найдено.'); return; }
+    if (!confirm('Заменить текущие записи на бэкап?')) return;
+    try {
+      const backup = JSON.parse(raw);
+      if (!Array.isArray(backup)) throw new Error('Неверный формат');
+      this.records = backup;
+      this.saveRecords();
+      this.renderHistory();
+      this.renderCharts();
+      alert('Восстановлено записей: ' + this.records.length);
+    } catch (e) { alert('Ошибка восстановления: ' + e.message); }
+  },
+  updateBackupInfo() {
+    const el = document.getElementById('auto-backup-info');
+    if (!el) return;
+    const last = this.settings.lastAutoBackup;
+    el.textContent = last ? new Date(last).toLocaleString('ru-RU') : '—';
+  },
+
+  // ===== NAVIGATION =====
+  show(tab) {
+    document.querySelectorAll('.view').forEach(v => { v.classList.add('hidden'); v.classList.remove('view-active'); });
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    const view = document.getElementById('view-' + tab);
+    view.classList.remove('hidden');
+    view.classList.add('view-active');
+    document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+
+    if (tab === 'entry') {
+      const h = document.getElementById('f-height');
+      if (!h.value && this.settings.heightDefault) h.value = this.settings.heightDefault;
+      this.calcBMI();
+      this.updateStatsBar();
+    }
+    if (tab === 'history') this.renderHistory();
+    if (tab === 'charts') this.renderCharts();
+  },
+
+  // ===== ENTRY =====
+  todayStr() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  },
+  nowHM() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  },
+  getNum(id) {
+    const v = document.getElementById(id).value;
+    return v === '' ? null : parseFloat(v);
+  },
+  calcBMI() {
+    const w = this.getNum('f-weight');
+    const h = this.getNum('f-height');
+    const res = document.getElementById('bmi-result');
+    const cat = document.getElementById('bmi-category');
+    if (!w || !h) { res.textContent = '—'; cat.textContent = 'Введите вес и рост'; this.styleBmiBadge(null); return; }
+    const bmi = Math.round((w / ((h / 100) ** 2)) * 10) / 10;
+    res.textContent = bmi;
+    cat.textContent = this.bmiLabel(bmi);
+    this.styleBmiBadge(bmi);
+    this.updateStatsBar();
+  },
+  bmiStyle(bmi) {
+    if (bmi < 18.5) return { bg: '#dbeafe', color: '#1d4ed8' };
+    if (bmi < 25) return { bg: '#d1fae5', color: '#047857' };
+    if (bmi < 30) return { bg: '#fef3c7', color: '#b45309' };
+    return { bg: '#fee2e2', color: '#b91c1c' };
+  },
+  styleBmiBadge(bmi) {
+    const cat = document.getElementById('bmi-category');
+    const st = bmi == null ? { bg: '#e2e8f0', color: '#475569' } : this.bmiStyle(bmi);
+    cat.style.background = st.bg;
+    cat.style.color = st.color;
+  },
+  updateStatsBar() {
+    const rSys = this.getNum('f-right-sys');
+    const rDia = this.getNum('f-right-dia');
+    const lSys = this.getNum('f-left-sys');
+    const lDia = this.getNum('f-left-dia');
+    const sys = rSys ?? lSys;
+    const dia = rDia ?? lDia;
+    document.getElementById('stat-bp').textContent = (sys && dia) ? sys + '/' + dia : '—';
+    const w = this.getNum('f-weight');
+    document.getElementById('stat-weight').textContent = w ?? '—';
+    document.getElementById('stat-pulse').textContent = this.getNum('f-pulse') ?? '—';
+    const h = this.getNum('f-height');
+    document.getElementById('stat-bmi').textContent = (w && h) ? Math.round((w / ((h / 100) ** 2)) * 10) / 10 : '—';
+  },
+  bmiLabel(bmi) {
+    if (bmi < 18.5) return 'Недостаточная масса';
+    if (bmi < 25) return 'Норма';
+    if (bmi < 30) return 'Избыточная масса';
+    return 'Ожирение';
+  },
+  addRecord() {
+    const date = document.getElementById('f-date').value;
+    const time = document.getElementById('f-time').value || this.nowHM();
+    const tod = document.getElementById('f-tod').value;
+    const rightSys = this.getNum('f-right-sys');
+    const rightDia = this.getNum('f-right-dia');
+    const leftSys = this.getNum('f-left-sys');
+    const leftDia = this.getNum('f-left-dia');
+    const weight = this.getNum('f-weight');
+    const height = this.getNum('f-height');
+    const pulse = this.getNum('f-pulse');
+
+    if (!date) { alert('Выберите дату'); return; }
+    if (pulse !== null && (pulse < 20 || pulse > 300)) { alert('Проверьте пульс (ожидается 20–300 уд/мин)'); return; }
+    if (rightSys === null && rightDia === null && leftSys === null && leftDia === null && weight === null && pulse === null) {
+      alert('Заполните хотя бы одно значение');
+      return;
+    }
+
+    let bmi = null;
+    if (weight && height) bmi = Math.round((weight / ((height / 100) ** 2)) * 10) / 10;
+
+    const rec = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      date, time, timeOfDay: tod,
+      rightSys, rightDia, leftSys, leftDia,
+      weight, height, bmi, pulse,
+      createdAt: new Date().toISOString()
+    };
+    this.records.unshift(rec);
+    this.saveRecords();
+
+    // Reset form
+    document.getElementById('f-right-sys').value = '';
+    document.getElementById('f-right-dia').value = '';
+    document.getElementById('f-left-sys').value = '';
+    document.getElementById('f-left-dia').value = '';
+    document.getElementById('f-weight').value = '';
+    document.getElementById('f-pulse').value = '';
+    document.getElementById('f-time').value = this.nowHM();
+    this.calcBMI();
+    this.renderHistory();
+    alert('✅ Запись сохранена');
+  },
+
+  deleteRecord(id) {
+    if (!confirm('Удалить запись?')) return;
+    this.records = this.records.filter(r => r.id !== id);
+    this.saveRecords();
+    this.renderHistory();
+    this.renderCharts();
+  },
+
+  // ===== HISTORY =====
+  monthLabel(ym) {
+    return new Date(ym + '-01').toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+  },
+  dayLabel(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', weekday: 'short' });
+  },
+  bpStatus(sys, dia) {
+    if (sys == null && dia == null) return { label: '—', bg: '#f1f5f9', color: '#64748b' };
+    const s = sys ?? 0, d = dia ?? 0;
+    if (s >= 180 || d >= 120) return { label: 'Криз', bg: '#dc2626', color: '#fff' };
+    if (s >= 140 || d >= 90) return { label: '2 ст.', bg: '#ef4444', color: '#fff' };
+    if (s >= 130 || d >= 80) return { label: '1 ст.', bg: '#f97316', color: '#fff' };
+    if (s >= 120 && d < 80) return { label: 'Повышено', bg: '#fbbf24', color: '#fff' };
+    return { label: 'Норма', bg: '#10b981', color: '#fff' };
+  },
+  renderHistory() {
+    const container = document.getElementById('history-list');
+    const sorted = [...this.records].sort((a, b) => new Date(b.date + 'T00:00:00') - new Date(a.date + 'T00:00:00') || b.createdAt.localeCompare(a.createdAt));
+    const groups = {};
+    sorted.forEach(r => { const m = r.date.slice(0, 7); (groups[m] || (groups[m] = [])).push(r); });
+
+    let totalSys = 0, totalDia = 0, totalW = 0, totalBmi = 0, totalPulse = 0, nSys = 0, nW = 0, nBmi = 0, nPulse = 0;
+    this.records.forEach(r => {
+      if (r.rightSys != null) { totalSys += r.rightSys; nSys++; }
+      if (r.rightDia != null) { totalDia += r.rightDia; nSys++; }
+      if (r.weight != null) { totalW += r.weight; nW++; }
+      if (r.bmi != null) { totalBmi += r.bmi; nBmi++; }
+      if (r.pulse != null) { totalPulse += r.pulse; nPulse++; }
+    });
+
+    let html = '';
+    for (const [month, items] of Object.entries(groups)) {
+      html += '<div class="mb-2"><div class="month-header">' + this.monthLabel(month) + '</div>';
+      let lastDay = null;
+      items.forEach(r => {
+        const dayStr = r.date.slice(8, 10);
+        if (dayStr !== lastDay) {
+          lastDay = dayStr;
+          html += '<div class="day-header">' + this.dayLabel(r.date) + '</div>';
+        }
+        const sys = r.rightSys != null ? r.rightSys : r.leftSys;
+        const dia = r.rightDia != null ? r.rightDia : r.leftDia;
+        const st = this.bpStatus(sys, dia);
+        const todEmoji = r.timeOfDay === 'morning' ? '🌅' : r.timeOfDay === 'day' ? '☀️' : '🌙';
+        html += '<div class="record-card card p-4 mb-2 flex items-center justify-between">';
+        html += '<div class="flex items-center gap-3">';
+        html += '<span style="font-size:20px">' + todEmoji + '</span>';
+        const timeStr = r.time || (r.createdAt ? new Date(r.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '');
+        html += '<div><div class="text-xs text-gray-500 font-semibold">' + TIME_LABELS[r.timeOfDay] + (timeStr ? ' · ' + timeStr : '') + '</div></div>';
+        html += '</div>';
+        html += '<div class="text-center">';
+        html += '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">' + (sys ?? '—') + '/' + (dia ?? '—') + '</span>';
+        html += '</div>';
+        html += '<div class="text-right">';
+        if (r.weight) html += '<div class="text-sm font-bold text-gray-900">' + r.weight + ' кг</div>';
+        if (r.bmi) html += '<div class="text-xs text-gray-500 font-semibold">ИМТ ' + r.bmi + '</div>';
+        if (r.pulse) html += '<div class="text-xs text-gray-500 font-semibold">❤️ ' + r.pulse + ' уд/мин</div>';
+        html += '</div>';
+        html += '<button onclick="app.deleteRecord(\'' + r.id + '\')" class="p-2 text-gray-400 hover:text-red-500 transition">🗑</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    container.innerHTML = html || '<div class="empty-state"><div style="font-size:48px;margin-bottom:12px">📝</div>Записей пока нет</div>';
+
+    const stats = document.getElementById('history-stats');
+    const parts = [];
+    if (nSys) parts.push('ср. давление ' + Math.round(totalSys / nSys) + '/' + Math.round(totalDia / nSys));
+    if (nW) parts.push('ср. вес ' + (totalW / nW).toFixed(1) + ' кг');
+    if (nBmi) parts.push('ср. ИМТ ' + (totalBmi / nBmi).toFixed(1));
+    if (nPulse) parts.push('ср. пульс ' + Math.round(totalPulse / nPulse) + ' уд/мин');
+    stats.textContent = 'Всего: ' + this.records.length + (parts.length ? ' · ' + parts.join(' · ') : '');
+  },
+
+  // ===== CHARTS =====
+  setPeriod(p) {
+    this.period = p;
+    document.querySelectorAll('.period-btn').forEach(b => {
+      b.classList.remove('bg-white', 'shadow-sm', 'text-gray-700', 'bg-indigo-600', 'text-white', 'shadow-md');
+      b.classList.add('bg-gray-100', 'text-gray-500');
+    });
+    event.target.classList.remove('bg-gray-100', 'text-gray-500');
+    event.target.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
+    this.renderCharts();
+  },
+  withinPeriod(dateStr) {
+    if (this.period === 'all') return true;
+    const days = this.period === '7d' ? 7 : this.period === '30d' ? 30 : 90;
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return now - d <= days * 86400000 && now >= d;
+  },
+  renderCharts() {
+    ['pressure', 'pulse', 'weight', 'bmi'].forEach(key => { if (this.charts[key]) this.charts[key].destroy(); });
+
+    const data = [...this.records].filter(r => this.withinPeriod(r.date)).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const labels = data.map(r => this.dayLabel(r.date));
+
+    const getSys = r => r.rightSys != null ? r.rightSys : r.leftSys;
+    const getDia = r => r.rightDia != null ? r.rightDia : r.leftDia;
+
+    const commonOpts = {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { size: 11, weight: '600' }, usePointStyle: true, padding: 12 } } },
+      scales: {
+        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+      }
+    };
+
+    this.charts.pressure = new Chart(document.getElementById('chart-pressure'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Верхнее', data: data.map(getSys), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#ef4444', fill: false, borderWidth: 2.5 },
+          { label: 'Нижнее', data: data.map(getDia), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#3b82f6', fill: false, borderWidth: 2.5 }
+        ]
+      },
+      options: commonOpts
+    });
+
+    this.charts.pulse = new Chart(document.getElementById('chart-pulse'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label: 'Пульс', data: data.map(r => r.pulse), borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#f43f5e', fill: true, borderWidth: 2.5 }]
+      },
+      options: commonOpts
+    });
+
+    this.charts.weight = new Chart(document.getElementById('chart-weight'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label: 'Вес', data: data.map(r => r.weight), borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#10b981', fill: true, borderWidth: 2.5 }]
+      },
+      options: { ...commonOpts, scales: { ...commonOpts.scales, y: { ...commonOpts.scales.y, beginAtZero: true } } }
+    });
+
+    this.charts.bmi = new Chart(document.getElementById('chart-bmi'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{ label: 'ИМТ', data: data.map(r => r.bmi), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#8b5cf6', fill: true, borderWidth: 2.5 }]
+      },
+      options: commonOpts
+    });
+  },
+
+  // ===== EXPORT / IMPORT =====
+  exportData() {
+    const blob = new Blob([JSON.stringify(this.records, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'здоровье_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  importData(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        if (!Array.isArray(imported)) throw new Error('Неверный формат');
+        const old = this.records.length;
+        imported.forEach(r => { if (!this.records.find(x => x.id === r.id)) this.records.push(r); });
+        this.records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        this.saveRecords();
+        alert('Импортировано записей: ' + (this.records.length - old));
+        this.renderHistory();
+        this.renderCharts();
+      } catch (err) { alert('Ошибка импорта: ' + err.message); }
+    };
+    reader.readAsText(file);
+  },
+  clearAll() {
+    if (!confirm('Удалить ВСЕ записи? Это нельзя отменить.')) return;
+    this.records = [];
+    this.saveRecords();
+    this.renderHistory();
+    this.renderCharts();
+  }
+};
+
+const TIME_LABELS = { morning: 'Утро', day: 'День', evening: 'Вечер' };
+
+app.init();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
+}
+</script>
+</body>
+</html>
