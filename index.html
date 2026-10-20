@@ -258,7 +258,7 @@
         </div>
 
         <div class="pt-2">
-          <label class="block text-sm font-bold text-gray-700 mb-3">🩺 Давление</label>
+          <label class="block text-sm font-bold text-gray-700 mb-3">🩺 Давление и пульс</label>
           <div class="grid grid-cols-2 gap-3">
             <div>
               <div class="text-xs font-bold text-gray-500 mb-1.5">Правая рука</div>
@@ -266,6 +266,8 @@
                 <input type="number" id="f-right-sys" placeholder="120" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
                 <input type="number" id="f-right-dia" placeholder="80" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
               </div>
+              <div class="text-xs font-bold text-gray-500 mt-2.5 mb-1.5">Пульс, уд/мин</div>
+              <input type="number" id="f-right-pulse" min="20" max="300" placeholder="72" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
             </div>
             <div>
               <div class="text-xs font-bold text-gray-500 mb-1.5">Левая рука</div>
@@ -273,13 +275,10 @@
                 <input type="number" id="f-left-sys" placeholder="120" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
                 <input type="number" id="f-left-dia" placeholder="80" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
               </div>
+              <div class="text-xs font-bold text-gray-500 mt-2.5 mb-1.5">Пульс, уд/мин</div>
+              <input type="number" id="f-left-pulse" min="20" max="300" placeholder="72" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
             </div>
           </div>
-        </div>
-
-        <div class="pt-2">
-          <label class="block text-sm font-bold text-gray-700 mb-3">❤️ Пульс, уд/мин</label>
-          <input type="number" id="f-pulse" min="20" max="300" placeholder="72" inputmode="numeric" class="input-field" style="text-align:center" oninput="app.updateStatsBar()">
         </div>
 
         <div class="pt-2">
@@ -558,6 +557,17 @@ const app = {
     if (h >= 12 && h < 18) return { emoji: '☀️', label: 'День' };
     return { emoji: '🌙', label: 'Вечер' };
   },
+  // Две руки -> строка вида "72/70"; одна -> просто число; старые записи -> поле pulse
+  pulseText(rightPulse, leftPulse, legacyPulse) {
+    if (rightPulse != null && leftPulse != null) return rightPulse + '/' + leftPulse;
+    if (rightPulse != null) return String(rightPulse);
+    if (leftPulse != null) return String(leftPulse);
+    if (legacyPulse != null) return String(legacyPulse);
+    return null;
+  },
+  recordPulseText(r) {
+    return this.pulseText(r.rightPulse, r.leftPulse, r.pulse);
+  },
   getNum(id) {
     const v = document.getElementById(id).value;
     return v === '' ? null : parseFloat(v);
@@ -596,7 +606,7 @@ const app = {
     document.getElementById('stat-bp').textContent = (sys && dia) ? sys + '/' + dia : '—';
     const w = this.getNum('f-weight');
     document.getElementById('stat-weight').textContent = w ?? '—';
-    document.getElementById('stat-pulse').textContent = this.getNum('f-pulse') ?? '—';
+    document.getElementById('stat-pulse').textContent = this.pulseText(this.getNum('f-right-pulse'), this.getNum('f-left-pulse'));
     const h = this.getNum('f-height');
     document.getElementById('stat-bmi').textContent = (w && h) ? Math.round((w / ((h / 100) ** 2)) * 10) / 10 : '—';
   },
@@ -615,11 +625,13 @@ const app = {
     const leftDia = this.getNum('f-left-dia');
     const weight = this.getNum('f-weight');
     const height = this.getNum('f-height');
-    const pulse = this.getNum('f-pulse');
+    const rightPulse = this.getNum('f-right-pulse');
+    const leftPulse = this.getNum('f-left-pulse');
 
     if (!date) { alert('Выберите дату'); return; }
-    if (pulse !== null && (pulse < 20 || pulse > 300)) { alert('Проверьте пульс (ожидается 20–300 уд/мин)'); return; }
-    if (rightSys === null && rightDia === null && leftSys === null && leftDia === null && weight === null && pulse === null) {
+    if (rightPulse !== null && (rightPulse < 20 || rightPulse > 300)) { alert('Проверьте пульс правой руки (ожидается 20–300 уд/мин)'); return; }
+    if (leftPulse !== null && (leftPulse < 20 || leftPulse > 300)) { alert('Проверьте пульс левой руки (ожидается 20–300 уд/мин)'); return; }
+    if (rightSys === null && rightDia === null && leftSys === null && leftDia === null && weight === null && rightPulse === null && leftPulse === null) {
       alert('Заполните хотя бы одно значение');
       return;
     }
@@ -631,7 +643,8 @@ const app = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       date, time,
       rightSys, rightDia, leftSys, leftDia,
-      weight, height, bmi, pulse,
+      rightPulse, leftPulse,
+      weight, height, bmi,
       createdAt: new Date().toISOString()
     };
     this.records.unshift(rec);
@@ -643,7 +656,8 @@ const app = {
     document.getElementById('f-left-sys').value = '';
     document.getElementById('f-left-dia').value = '';
     document.getElementById('f-weight').value = '';
-    document.getElementById('f-pulse').value = '';
+    document.getElementById('f-right-pulse').value = '';
+    document.getElementById('f-left-pulse').value = '';
     document.getElementById('f-time').value = this.nowHM();
     this.calcBMI();
     this.renderHistory();
@@ -695,7 +709,11 @@ const app = {
       if (dia != null) { totalDia += dia; nDia++; }
       if (r.weight != null) { totalW += r.weight; nW++; }
       if (r.bmi != null) { totalBmi += r.bmi; nBmi++; }
-      if (r.pulse != null) { totalPulse += r.pulse; nPulse++; }
+      const pR = r.rightPulse, pL = r.leftPulse;
+      if (pR != null) { totalPulse += pR; nPulse++; }
+      if (pL != null) { totalPulse += pL; nPulse++; }
+      // старые записи, где пульс был один на всю запись
+      if (pR == null && pL == null && r.pulse != null) { totalPulse += r.pulse; nPulse++; }
     });
 
     let html = '';
@@ -730,7 +748,8 @@ const app = {
           const bs = this.bmiStyle(r.bmi);
           html += '<span class="text-xs font-bold" style="background:' + bs.bg + ';color:' + bs.color + ';padding:3px 9px;border-radius:999px;display:inline-block;margin-top:2px">ИМТ ' + r.bmi + '</span>';
         }
-        if (r.pulse) html += '<div class="text-xs text-gray-500 font-semibold">❤️ ' + r.pulse + ' уд/мин</div>';
+        const pulseTxt = this.recordPulseText(r);
+        if (pulseTxt) html += '<div class="text-xs text-gray-500 font-semibold">❤️ ' + pulseTxt + ' уд/мин</div>';
         html += '</div>';
         html += '<button onclick="app.deleteRecord(\'' + r.id + '\')" class="p-2 text-gray-400 hover:text-red-500 transition">🗑</button>';
         html += '</div>';
@@ -804,7 +823,10 @@ const app = {
       type: 'line',
       data: {
         labels,
-        datasets: [{ label: 'Пульс', data: data.map(r => r.pulse), borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#f43f5e', fill: true, borderWidth: 2.5 }]
+        datasets: [
+          { label: 'Правая', data: data.map(r => r.rightPulse ?? r.pulse), borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.08)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#f43f5e', fill: false, borderWidth: 2.5 },
+          { label: 'Левая', data: data.map(r => r.leftPulse), borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.08)', tension: 0.4, pointRadius: 4, pointBackgroundColor: '#0ea5e9', fill: false, borderWidth: 2.5 }
+        ]
       },
       options: commonOpts
     });
