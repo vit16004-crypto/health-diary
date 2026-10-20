@@ -685,10 +685,14 @@ const app = {
     const groups = {};
     sorted.forEach(r => { const m = r.date.slice(0, 7); (groups[m] || (groups[m] = [])).push(r); });
 
-    let totalSys = 0, totalDia = 0, totalW = 0, totalBmi = 0, totalPulse = 0, nSys = 0, nW = 0, nBmi = 0, nPulse = 0;
+    let totalSys = 0, totalDia = 0, nSys = 0, nDia = 0;
+    let totalW = 0, nW = 0, totalBmi = 0, nBmi = 0, totalPulse = 0, nPulse = 0;
     this.records.forEach(r => {
-      if (r.rightSys != null) { totalSys += r.rightSys; nSys++; }
-      if (r.rightDia != null) { totalDia += r.rightDia; nSys++; }
+      // берём правую руку, а если её нет — левую (как в карточках и на графиках)
+      const sys = r.rightSys != null ? r.rightSys : r.leftSys;
+      const dia = r.rightDia != null ? r.rightDia : r.leftDia;
+      if (sys != null) { totalSys += sys; nSys++; }
+      if (dia != null) { totalDia += dia; nDia++; }
       if (r.weight != null) { totalW += r.weight; nW++; }
       if (r.bmi != null) { totalBmi += r.bmi; nBmi++; }
       if (r.pulse != null) { totalPulse += r.pulse; nPulse++; }
@@ -738,7 +742,9 @@ const app = {
 
     const stats = document.getElementById('history-stats');
     const parts = [];
-    if (nSys) parts.push('ср. давление ' + Math.round(totalSys / nSys) + '/' + Math.round(totalDia / nSys));
+    if (nSys || nDia) {
+      parts.push('ср. давление ' + (nSys ? Math.round(totalSys / nSys) : '—') + '/' + (nDia ? Math.round(totalDia / nDia) : '—'));
+    }
     if (nW) parts.push('ср. вес ' + (totalW / nW).toFixed(1) + ' кг');
     if (nBmi) parts.push('ср. ИМТ ' + (totalBmi / nBmi).toFixed(1));
     if (nPulse) parts.push('ср. пульс ' + Math.round(totalPulse / nPulse) + ' уд/мин');
