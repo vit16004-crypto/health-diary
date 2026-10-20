@@ -60,7 +60,18 @@
       box-shadow: 0 0 0 4px rgba(79,70,229,0.08);
     }
     .input-field::placeholder { color: #94a3b8; font-weight: 500; }
-    input[type="date"] { -webkit-appearance: none; }
+    /* Нативный индикатор у полей даты/времени имеет фиксированный размер,
+       не сжимается вместе с ячейкой и вылезал за её правую границу.
+       Отключаем его — само поле остаётся рабочим, нажатие открывает выбор. */
+    input[type="date"], input[type="time"] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      overflow: hidden;
+      max-width: 100%;
+      box-sizing: border-box;
+      display: block;
+    }
 
     .btn-primary {
       background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
