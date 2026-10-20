@@ -42,13 +42,17 @@
       background: #f8fafc;
       border: 2px solid #e2e8f0;
       border-radius: 16px;
-      padding: 14px 16px;
+      padding: 14px 12px;
       font-size: 17px;
       font-weight: 600;
       color: #1e293b;
       transition: all 0.2s;
       width: 100%;
+      min-width: 0;
     }
+    /* Элементы сетки обязаны уметь сжиматься, иначе поля вылезают
+       за край карточки и обрезают текст на узких экранах */
+    .grid > div { min-width: 0; }
     .input-field:focus {
       outline: none;
       border-color: var(--primary);
@@ -651,6 +655,10 @@ const app = {
     const d = new Date(dateStr + 'T00:00:00');
     return d.toLocaleDateString('ru-RU', { day: 'numeric', weekday: 'short' });
   },
+  dateShort(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  },
   bpStatus(sys, dia) {
     if (sys == null && dia == null) return { label: '—', bg: '#f1f5f9', color: '#64748b' };
     const s = sys ?? 0, d = dia ?? 0;
@@ -693,7 +701,10 @@ const app = {
         const timeStr = this.recTime(r);
         const tod = this.todFromTime(timeStr);
         if (tod) html += '<span style="font-size:20px">' + tod.emoji + '</span>';
-        if (timeStr) html += '<div><div class="text-xs text-gray-500 font-semibold">' + (tod ? tod.label + ' · ' : '') + timeStr + '</div></div>';
+        html += '<div>';
+        html += '<div class="text-xs font-bold text-gray-700">' + this.dateShort(r.date) + '</div>';
+        if (timeStr) html += '<div class="text-xs text-gray-500 font-semibold">' + (tod ? tod.label + ' · ' : '') + timeStr + '</div>';
+        html += '</div>';
         html += '</div>';
         html += '<div class="text-center">';
         html += '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">' + (sys ?? '—') + '/' + (dia ?? '—') + '</span>';
