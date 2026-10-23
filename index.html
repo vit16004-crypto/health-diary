@@ -565,8 +565,36 @@ const app = {
     if (legacyPulse != null) return String(legacyPulse);
     return null;
   },
-  recordPulseText(r) {
-    return this.pulseText(r.rightPulse, r.leftPulse, r.pulse);
+  // Пульс в карточке: подписано, какая рука — "❤️ П 72 · Л 70 уд/мин"
+  recordPulseHtml(r) {
+    const R = r.rightPulse, L = r.leftPulse;
+    if (R == null && L == null) {
+      const legacy = this.pulseText(null, null, r.pulse);
+      return legacy == null ? null : '❤️ ' + legacy + ' уд/мин';
+    }
+    const parts = [];
+    if (R != null) parts.push('П ' + R);
+    if (L != null) parts.push('Л ' + L);
+    return '❤️ ' + parts.join(' · ') + ' уд/мин';
+  },
+  // Одна строка давления одной руки: "П" + бейдж со своим цветом статуса
+  armBpHtml(sys, dia, label) {
+    const st = this.bpStatus(sys, dia);
+    const txt = (sys == null && dia == null) ? '—' : (sys ?? '—') + '/' + (dia ?? '—');
+    return '<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px;margin-bottom:3px">'
+      + '<span style="font-size:10px;font-weight:800;color:#94a3b8">' + label + '</span>'
+      + '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + ';min-width:56px">' + txt + '</span>'
+      + '</div>';
+  },
+  // Давление в карточке: сначала правая рука, потом левая
+  recordBpHtml(r) {
+    const hasRight = r.rightSys != null || r.rightDia != null;
+    const hasLeft = r.leftSys != null || r.leftDia != null;
+    if (!hasRight && !hasLeft) {
+      const st = this.bpStatus(null, null);
+      return '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">—</span>';
+    }
+    return this.armBpHtml(r.rightSys, r.rightDia, 'П') + this.armBpHtml(r.leftSys, r.leftDia, 'Л');
   },
   getNum(id) {
     const v = document.getElementById(id).value;
@@ -726,9 +754,6 @@ const app = {
           lastDay = dayStr;
           html += '<div class="day-header">' + this.dayLabel(r.date) + '</div>';
         }
-        const sys = r.rightSys != null ? r.rightSys : r.leftSys;
-        const dia = r.rightDia != null ? r.rightDia : r.leftDia;
-        const st = this.bpStatus(sys, dia);
         html += '<div class="record-card card p-4 mb-2 flex items-center justify-between">';
         html += '<div class="flex items-center gap-3">';
         const timeStr = this.recTime(r);
@@ -739,17 +764,15 @@ const app = {
         if (timeStr) html += '<div class="text-xs text-gray-500 font-semibold">' + (tod ? tod.label + ' · ' : '') + timeStr + '</div>';
         html += '</div>';
         html += '</div>';
-        html += '<div class="text-center">';
-        html += '<span class="status-badge" style="background:' + st.bg + ';color:' + st.color + '">' + (sys ?? '—') + '/' + (dia ?? '—') + '</span>';
-        html += '</div>';
+        html += '<div class="text-right">' + this.recordBpHtml(r) + '</div>';
         html += '<div class="text-right">';
         if (r.weight) html += '<div class="text-sm font-bold text-gray-900">' + r.weight + ' кг</div>';
         if (r.bmi) {
           const bs = this.bmiStyle(r.bmi);
           html += '<span class="text-xs font-bold" style="background:' + bs.bg + ';color:' + bs.color + ';padding:3px 9px;border-radius:999px;display:inline-block;margin-top:2px">ИМТ ' + r.bmi + '</span>';
         }
-        const pulseTxt = this.recordPulseText(r);
-        if (pulseTxt) html += '<div class="text-xs text-gray-500 font-semibold">❤️ ' + pulseTxt + ' уд/мин</div>';
+        const pulseHtml = this.recordPulseHtml(r);
+        if (pulseHtml) html += '<div class="text-xs text-gray-500 font-semibold">' + pulseHtml + '</div>';
         html += '</div>';
         html += '<button onclick="app.deleteRecord(\'' + r.id + '\')" class="p-2 text-gray-400 hover:text-red-500 transition">🗑</button>';
         html += '</div>';
